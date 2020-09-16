@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  create:
+    tags:
+      - v*
+
+jobs:
+  build:
+    name: Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, windows-latest, macos-latest]
+
+    steps:
+      - name: Chceckout code
+        uses: actions/checkout@v2
+      - name: Build release
+        run: cargo build --release
+      - name: Clean .d files
+        working-directory: ./target/release
+        run: |
+          rm *.d
+      - name: Clean .pdb files
+        if: runner.os == 'Windows'
+        working-directory: ./target/release
+        run: |
+          rm *.pdb
+      - name: Rename macOS artifact
+        if: runner.os == 'macOS'
+        working-directory: ./target/release
+        run: |
+          mv janosik janosik-macos
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "./target/release/janosik*"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: true
+          allowUpdates: true
