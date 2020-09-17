@@ -1,3 +1,4 @@
+use crate::commands::locale::*;
 use serenity::prelude::*;
 use serenity::{
     framework::standard::{
@@ -39,7 +40,7 @@ pub async fn blackbox(ctx: &Context, msg: &Message, args: Args) -> CommandResult
         Err(_) => {
             if let Err(why) = msg
                 .channel_id
-                .say(&ctx.http, format!("Nie znaleziono ` {} `", program_name))
+                .say(&ctx.http, not_found_message(&program_name))
                 .await
             {
                 println!("Error sending message: {:?}", why);
@@ -59,13 +60,7 @@ pub async fn blackbox(ctx: &Context, msg: &Message, args: Args) -> CommandResult
 
             if let Err(why) = msg
                 .channel_id
-                .say(
-                    &ctx.http,
-                    &format!(
-                        "`{}` działał zbyt długo, sprawdź poprawność wejścia",
-                        program_name
-                    ),
-                )
+                .say(&ctx.http, timeout_message(&program_name))
                 .await
             {
                 println!("Error sending message: {:?}", why);
@@ -80,10 +75,7 @@ pub async fn blackbox(ctx: &Context, msg: &Message, args: Args) -> CommandResult
     if status_code.is_none() || status_code.unwrap() != 0 {
         if let Err(why) = msg
             .channel_id
-            .say(
-                &ctx.http,
-                format!("`{}` wyjebał się, sprawdź poprawność wejścia", program_name),
-            )
+            .say(&ctx.http, crash_message(&program_name))
             .await
         {
             println!("Error sending message: {:?}", why);
@@ -104,10 +96,7 @@ pub async fn blackbox(ctx: &Context, msg: &Message, args: Args) -> CommandResult
     };
 
     out = if out.is_empty() {
-        format!(
-            "`{}` nic nie wypisał, sprawdź poprawność wejścia",
-            program_name
-        )
+        no_output_message(program_name.as_str())
     } else {
         format!("```\n{}\n```", out)
     };
