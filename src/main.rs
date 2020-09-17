@@ -19,11 +19,20 @@ use serenity::futures::io::ErrorKind;
 #[macro_use]
 extern crate scan_fmt;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, _: Context, ready: Ready) {
+    async fn ready(&self, context: Context, ready: Ready) {
+        use serenity::model::gateway::Activity;
+        use serenity::model::user::OnlineStatus;
+
+        let activity = Activity::playing(format!("v{}", VERSION).as_str());
+        let status = OnlineStatus::Online;
+
+        context.set_presence(Some(activity), status).await;
         println!("{} is connected!", ready.user.name);
     }
 }
