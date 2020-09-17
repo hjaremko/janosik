@@ -5,14 +5,16 @@ use serenity::{
     framework::standard::{macros::hook, CommandResult, DispatchError, StandardFramework},
     http::Http,
     model::{channel::Message, gateway::Ready, id::UserId},
+    Error,
 };
 use std::collections::hash_map::RandomState;
-use std::env::VarError;
-use std::{collections::HashSet, env};
+use std::{collections::HashSet, env, io};
 
 mod commands;
+
 use crate::commands::blackbox::BLACKBOX_GROUP;
 use crate::commands::help::MY_HELP;
+use serenity::futures::io::ErrorKind;
 
 #[macro_use]
 extern crate scan_fmt;
@@ -71,23 +73,25 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     }
 }
 
-#[tokio::main]
-async fn main() {
-    let token = get_token_from_env().unwrap();
-    let owners = get_owners(&token).await;
-    let mut client = make_client(token, owners).await;
+type BoxError = Box<dyn std::error::Error>;
+type BoxResult = Result<(), BoxError>;
 
-    if let Err(why) = client.start().await {
+#[tokio::main]
+async fn main() -> BoxResult {
+    if let Err(why) = make_client().await?.start().await {
         println!("Client error: {:?}", why);
     }
+
+    Ok(())
 }
 
-async fn make_client(token: String, owners: HashSet<UserId>) -> Client {
-    Client::new(token)
+async fn make_client() -> Result<Client, Error> {
+    let token = get_token_from_env()?;
+
+    Client::new(&token)
         .event_handler(Handler)
-        .framework(make_framework(owners))
+        .framework(make_framework(get_owners(&token).await?))
         .await
-        .expect("Err creating client")
 }
 
 fn make_framework(owners: HashSet<UserId>) -> StandardFramework {
@@ -107,25 +111,32 @@ fn make_framework(owners: HashSet<UserId>) -> StandardFramework {
         .group(&BLACKBOX_GROUP)
 }
 
-async fn get_owners(token: &str) -> HashSet<UserId, RandomState> {
+async fn get_owners(token: &str) -> Result<HashSet<UserId, RandomState>, Error> {
     let http = Http::new_with_token(&token);
-    let (owners, _bot_id) = match http.get_current_application_info().await {
+
+    match http.get_current_application_info().await {
         Ok(info) => {
             let mut owners = HashSet::new();
+
             if let Some(team) = info.team {
                 owners.insert(team.owner_user_id);
             } else {
                 owners.insert(info.owner.id);
             }
 
-            (owners, info.id)
+            Ok(owners)
         }
-        Err(why) => panic!("Could not access application info: {:?}", why),
-    };
-    owners
+        Err(why) => Err(why),
+    }
 }
 
-fn get_token_from_env() -> Result<String, VarError> {
+fn get_token_from_env() -> Result<String, Error> {
     const TOKEN_NAME: &str = "JANOSIK_TOKEN";
-    env::var(TOKEN_NAME)
+    match env::var(TOKEN_NAME) {
+        Ok(token) => Ok(token),
+        Err(_) => {
+            let string = format!("Variable {} is not present in the environment!", TOKEN_NAME);
+            Err(Error::Io(io::Error::new(ErrorKind::NotFound, string)))
+        }
+    }
 }
