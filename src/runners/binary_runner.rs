@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::process::{Child, ChildStdout, Command, Stdio};
 use std::time::Duration;
+use tracing::{error, info};
 use wait_timeout::ChildExt;
 
 type RunnerResult = Result<String, RunnerError>;
@@ -20,11 +21,12 @@ impl BinaryRunner {
         let file = BinaryRunner::create_tmp_file(input)?;
         let mut process = BinaryRunner::find_binary(program_name, file)?;
 
-        println!("Program {} started", program_name);
+        info!("Program {} started", program_name);
         let status_code = BinaryRunner::wait_timeout(&mut process)?;
-        println!("{} returned {:?}", program_name, status_code);
+        info!("{} returned {:?}", program_name, status_code);
 
         if status_code != 0 {
+            error!("{} crashed!", program_name);
             return Err(RunnerError::Crash);
         }
 

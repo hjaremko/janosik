@@ -8,7 +8,7 @@ use serenity::{
 use std::collections::HashSet;
 
 #[help]
-#[individual_command_tip = "BaCa assignments blackbox"]
+#[individual_command_tip = "Discord bot helping Jagiellonian University computer science students test their programming assignments."]
 #[command_not_found_text = "Could not find: `{}`."]
 #[max_levenshtein_distance(3)]
 #[indention_prefix = "+"]

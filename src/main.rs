@@ -1,4 +1,9 @@
-use chrono::Utc;
+mod commands;
+mod runners;
+
+use crate::commands::blackbox::BLACKBOX_GROUP;
+use crate::commands::help::MY_HELP;
+use serenity::futures::io::ErrorKind;
 use serenity::prelude::*;
 use serenity::{
     async_trait,
@@ -9,13 +14,8 @@ use serenity::{
 };
 use std::collections::hash_map::RandomState;
 use std::{collections::HashSet, env, io};
-
-mod commands;
-mod runners;
-
-use crate::commands::blackbox::BLACKBOX_GROUP;
-use crate::commands::help::MY_HELP;
-use serenity::futures::io::ErrorKind;
+use tracing::{debug, error, info, instrument, warn, Level};
+use tracing_subscriber::FmtSubscriber;
 
 #[macro_use]
 extern crate scan_fmt;
@@ -34,13 +34,14 @@ impl EventHandler for Handler {
         let status = OnlineStatus::Online;
 
         context.set_presence(Some(activity), status).await;
-        println!("{} is connected!", ready.user.name);
+        info!("{} is connected!", ready.user.name);
     }
 }
 
 #[hook]
+#[instrument]
 async fn before(_ctx: &Context, msg: &Message, command_name: &str) -> bool {
-    println!(
+    info!(
         "Got command '{}' by user '{}'",
         command_name, msg.author.name
     );
@@ -50,24 +51,19 @@ async fn before(_ctx: &Context, msg: &Message, command_name: &str) -> bool {
 #[hook]
 async fn after(_ctx: &Context, _msg: &Message, command_name: &str, command_result: CommandResult) {
     match command_result {
-        Ok(()) => println!("Processed command '{}'", command_name),
-        Err(why) => println!("Command '{}' returned error {:?}", command_name, why),
+        Ok(()) => info!("Processed command '{}'", command_name),
+        Err(why) => warn!("Command '{}' returned error {:?}", command_name, why),
     }
 }
 
 #[hook]
 async fn unknown_command(_ctx: &Context, _msg: &Message, unknown_command_name: &str) {
-    println!("Could not find command named '{}'", unknown_command_name);
+    info!("Could not find command named '{}'", unknown_command_name);
 }
 
 #[hook]
 async fn normal_message(_ctx: &Context, msg: &Message) {
-    println!(
-        "[{}] {}: {}",
-        Utc::now().format("%T"),
-        msg.author.name,
-        msg.content
-    );
+    debug!("{}: {}", msg.author.name, msg.content);
 }
 
 #[hook]
@@ -87,9 +83,16 @@ type BoxError = Box<dyn std::error::Error>;
 type BoxResult = Result<(), BoxError>;
 
 #[tokio::main]
+#[instrument]
 async fn main() -> BoxResult {
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+
     if let Err(why) = make_client().await?.start().await {
-        println!("Client error: {:?}", why);
+        error!("Client error: {:?}", why);
     }
 
     Ok(())
