@@ -8,12 +8,9 @@ use serenity::{
     model::channel::Message,
     utils::{content_safe, ContentSafeOptions},
 };
-use std::fs::File;
-use std::io::{BufReader, Error, ErrorKind, Read};
-use std::process::{Child, ChildStdout, Command, Stdio};
-use std::time::Duration;
-use std::{fs, io};
-use wait_timeout::ChildExt;
+
+use crate::runners::binary_runner::BinaryRunner;
+use crate::runners::runner_error::RunnerError;
 
 #[group]
 #[commands(blackbox)]
@@ -27,94 +24,24 @@ pub async fn blackbox(ctx: &Context, msg: &Message, args: Args) -> CommandResult
     println!("Program: {}", program_name);
     println!("Input: {}", input);
 
-    let (child, status_code) = match run_program(&program_name, input).await {
-        Ok(c) => c,
-        Err(e) => {
-            send_message(&ctx, msg, e.as_str()).await?;
-            return Ok(());
-        }
+    let output = match BinaryRunner::run(&program_name, &input) {
+        Ok(out) => out,
+        Err(e) => match e {
+            RunnerError::NoInput => no_input_message(),
+            RunnerError::Timeout => timeout_message(&program_name),
+            RunnerError::NotFound => not_found_message(&program_name),
+            RunnerError::NoOutput => no_output_message(&program_name),
+            RunnerError::Crash => crash_message(&program_name),
+            RunnerError::Other(e) => e,
+        },
     };
 
-    if status_code != 0 {
-        send_message(&ctx, msg, crash_message(&program_name).as_str()).await?;
-        return Ok(()); // todo: figure out how to return Err
-    }
-
-    let output = read_output(program_name, child);
-
-    send_message(&ctx, msg, output.as_str()).await?;
+    send_message(&ctx, msg, &output).await?;
     Ok(())
-}
-
-fn read_output(program_name: String, child: Child) -> String {
-    let mut reader = BufReader::new(get_stdout(child).unwrap());
-    let mut output = String::new();
-
-    reader.read_to_string(&mut output).unwrap();
-
-    output = if output.is_empty() {
-        no_output_message(program_name.as_str())
-    } else {
-        format!("```\n{}\n```", output)
-    };
-    output
-}
-
-async fn run_program(program_name: &str, input: String) -> Result<(Child, i32), String> {
-    let file = match create_tmp_file(input) {
-        Ok(f) => f,
-        Err(_) => return Err("Cannot open tmp file".to_string()),
-    };
-    let child = spawn_process(&program_name, file);
-
-    if child.is_err() {
-        return Err(not_found_message(&program_name));
-    }
-
-    let mut child = child.unwrap();
-
-    println!("Program {} started", program_name);
-
-    let timeout = Duration::from_secs(30);
-
-    let status_code = match child.wait_timeout(timeout) {
-        Ok(c) => c,
-        Err(_) => return Err("IO error".to_string()),
-    };
-
-    let status_code = match status_code {
-        None => {
-            child.kill().expect("Command wasn't running");
-            return Err(timeout_message(&program_name));
-        }
-        Some(status) => status.code().unwrap(),
-    };
-
-    println!("{} returned {:?}", program_name, status_code);
-    Ok((child, status_code))
-}
-
-fn get_stdout(child: Child) -> Result<ChildStdout, Error> {
-    child
-        .stdout
-        .ok_or_else(|| Error::new(ErrorKind::Other, "Could not capture standard output."))
 }
 
 async fn send_message(ctx: &Context, msg: &Message, content: &str) -> serenity::Result<Message> {
     msg.channel_id.say(&ctx.http, content).await
-}
-
-fn spawn_process(program_name: &str, file: File) -> Result<Child, Error> {
-    Command::new(format!("bin/{}", program_name))
-        .stdin(Stdio::from(file))
-        .stdout(Stdio::piped())
-        .spawn()
-}
-
-fn create_tmp_file(input: String) -> io::Result<File> {
-    const TMP_FILENAME: &str = "tmp.txt";
-    fs::write(TMP_FILENAME, input).expect("cannot write to tmp file");
-    File::open(TMP_FILENAME)
 }
 
 async fn parse_blackbox_command(

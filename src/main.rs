@@ -11,6 +11,7 @@ use std::collections::hash_map::RandomState;
 use std::{collections::HashSet, env, io};
 
 mod commands;
+mod runners;
 
 use crate::commands::blackbox::BLACKBOX_GROUP;
 use crate::commands::help::MY_HELP;
