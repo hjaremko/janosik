@@ -11,6 +11,7 @@ use serenity::{
 
 use crate::runners::binary_runner::BinaryRunner;
 use crate::runners::runner_error::RunnerError;
+use serenity::utils::MessageBuilder;
 
 #[group]
 #[commands(blackbox)]
@@ -36,7 +37,8 @@ pub async fn blackbox(ctx: &Context, msg: &Message, args: Args) -> CommandResult
         },
     };
 
-    send_message(&ctx, msg, &output).await?;
+    let content = MessageBuilder::new().user(&msg.author).build();
+    send_message(&ctx, msg, &format!("{}\n{}", content, output)).await?;
     Ok(())
 }
 
