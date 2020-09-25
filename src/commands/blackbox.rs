@@ -9,6 +9,7 @@ use serenity::{
     utils::{content_safe, ContentSafeOptions},
 };
 
+use crate::commands::send_message;
 use crate::runners::binary_runner::BinaryRunner;
 use crate::runners::runner_error::RunnerError;
 use serenity::utils::MessageBuilder;
@@ -41,11 +42,6 @@ pub async fn blackbox(ctx: &Context, msg: &Message, args: Args) -> CommandResult
     let content = MessageBuilder::new().user(&msg.author).build();
     send_message(&ctx, msg, &format!("{}\n{}", content, output)).await?;
     Ok(())
-}
-
-async fn send_message(ctx: &Context, msg: &Message, content: &str) -> serenity::Result<Message> {
-    info!("Sent: {}", content);
-    msg.channel_id.say(&ctx.http, content).await
 }
 
 async fn parse_blackbox_command(

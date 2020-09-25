@@ -1,8 +1,12 @@
 mod commands;
+mod database;
 mod runners;
 
 use crate::commands::blackbox::BLACKBOX_GROUP;
 use crate::commands::help::MY_HELP;
+use crate::commands::protip::PROTIP_GROUP;
+use crate::commands::send_message;
+use crate::database::{Database, DatabaseConnection};
 use serenity::futures::io::ErrorKind;
 use serenity::prelude::*;
 use serenity::{
@@ -52,13 +56,13 @@ async fn before(_ctx: &Context, msg: &Message, command_name: &str) -> bool {
 async fn after(_ctx: &Context, _msg: &Message, command_name: &str, command_result: CommandResult) {
     match command_result {
         Ok(()) => info!("Processed command '{}'", command_name),
-        Err(why) => warn!("Command '{}' returned error {:?}", command_name, why),
+        Err(why) => error!("Command '{}' returned error {:?}", command_name, why),
     }
 }
 
 #[hook]
 async fn unknown_command(_ctx: &Context, _msg: &Message, unknown_command_name: &str) {
-    info!("Could not find command named '{}'", unknown_command_name);
+    warn!("Could not find command named '{}'", unknown_command_name);
 }
 
 #[hook]
@@ -69,14 +73,19 @@ async fn normal_message(_ctx: &Context, msg: &Message) {
 #[hook]
 async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     if let DispatchError::Ratelimited(duration) = error {
-        let _ = msg
-            .channel_id
-            .say(
-                &ctx.http,
-                &format!("Try this again in {} seconds.", duration.as_secs()),
-            )
-            .await;
+        let _ = send_message(
+            ctx,
+            msg,
+            &format!("Try this again in {} seconds.", duration.as_secs()),
+        );
     }
+}
+
+#[macro_use]
+extern crate lazy_static;
+
+lazy_static! {
+    static ref DB_MUTEX: Mutex<Database> = Mutex::new(Database::new());
 }
 
 type BoxError = Box<dyn std::error::Error>;
@@ -86,10 +95,16 @@ type BoxResult = Result<(), BoxError>;
 #[instrument]
 async fn main() -> BoxResult {
     let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
+        .with_max_level(Level::INFO) //todo: set level info from command line arguments
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+
+    {
+        let mut db = DB_MUTEX.lock().await;
+        db.connect()?;
+        db.set_up()?;
+    }
 
     if let Err(why) = make_client().await?.start().await {
         error!("Client error: {:?}", why);
@@ -122,6 +137,7 @@ fn make_framework(owners: HashSet<UserId>) -> StandardFramework {
         .on_dispatch_error(dispatch_error)
         .help(&MY_HELP)
         .group(&BLACKBOX_GROUP)
+        .group(&PROTIP_GROUP)
 }
 
 async fn get_owners(token: &str) -> Result<HashSet<UserId, RandomState>, Error> {
