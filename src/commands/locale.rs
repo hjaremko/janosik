@@ -23,3 +23,19 @@ pub fn no_output_message(program_name: &str) -> String {
 pub fn no_input_message() -> String {
     NO_INPUT_MESSAGE.to_string()
 }
+
+pub fn add_protip_message(_content: &str, task: &str) -> String {
+    format!("Dodano protip do `{}`", task)
+}
+
+pub fn all_tasks_message(all_protips: &[String]) -> String {
+    format!("Dostępne listy protipów: `{:?}`", all_protips)
+}
+
+pub fn invalid_protip_id_message() -> String {
+    "Musisz podać numer protipa do usunięcia".to_string()
+}
+
+pub fn delete_protip_message(protip_id: &u32) -> String {
+    format!("Usunięto protip nr {}", protip_id)
+}
