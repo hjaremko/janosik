@@ -69,8 +69,7 @@ async fn unknown_command(_ctx: &Context, _msg: &Message, unknown_command_name: &
 async fn normal_message(_ctx: &Context, msg: &Message) {
     debug!("{}: {}", msg.author.name, msg.content);
 
-    const ABSURD: &str = r#"{
-W związku z zapytaniem, informuję, iż problem z nagrywaniem wiąże się z
+    const ABSURD: &str = r#"W związku z zapytaniem, informuję, iż problem z nagrywaniem wiąże się z
 naruszeniem RODO wobec STUDENTÓW.
 
 Dla mnie (na tę chwilę) jest to o tyle niezrozumiałe (mimo konkretnych
@@ -79,8 +78,7 @@ nawet gdyby wszyscy studenci PROSILI o nagrywanie zajęć, to zgadzając się
 na to, naruszamy RODO.
 
 Absurd!!!
-p.niemiec
-    }"#;
+p.niemiec"#;
 
     if msg.content != ABSURD && msg.content.to_lowercase().contains("nagrywa") {
         info!("Sending RODO notice");
