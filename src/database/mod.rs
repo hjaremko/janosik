@@ -1,6 +1,6 @@
 use rusqlite::{params, Connection, Result};
-use tracing::{debug, info, warn};
 use std::fmt;
+use tracing::{debug, info, warn};
 
 pub trait DatabaseConnection {
     fn connect(&mut self) -> Result<()>;

@@ -8,10 +8,12 @@ use serenity::{
     utils::{content_safe, ContentSafeOptions},
 };
 
-use crate::commands::locale::{add_protip_message, all_tasks_message, invalid_protip_id_message, delete_protip_message};
+use crate::commands::locale::{
+    add_protip_message, all_tasks_message, delete_protip_message, invalid_protip_id_message,
+};
 use crate::commands::send_message;
 use crate::database::ProtipHandler;
-use crate::{DB_MUTEX, database};
+use crate::{database, DB_MUTEX};
 
 #[group]
 #[prefixes("protip")]
