@@ -13,7 +13,7 @@ type RunnerResult = Result<String, RunnerError>;
 pub struct BinaryRunner {}
 
 impl BinaryRunner {
-    pub(crate) fn run(program_name: &str, input: &str) -> RunnerResult {
+    pub fn run(program_name: &str, input: &str) -> RunnerResult {
         if input.is_empty() {
             return Err(RunnerError::NoInput);
         }

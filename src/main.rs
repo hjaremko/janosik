@@ -7,8 +7,11 @@ use crate::commands::blackbox::BLACKBOX_GROUP;
 use crate::commands::help::MY_HELP;
 use crate::commands::protip::PROTIP_GROUP;
 use crate::commands::send_message;
-use crate::database::{Database, DatabaseConnection};
+use crate::database::protip_handler::ProtipHandler;
+use crate::database::sqlite_connection::SQLiteConnection;
+use crate::database::Database;
 use crate::trigger::handle_triggers;
+use once_cell::sync::Lazy;
 use serenity::futures::io::ErrorKind;
 use serenity::prelude::*;
 use serenity::{
@@ -85,12 +88,7 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     }
 }
 
-#[macro_use]
-extern crate lazy_static;
-
-lazy_static! {
-    static ref DB_MUTEX: Mutex<Database> = Mutex::new(Database::new());
-}
+static DATABASE: Lazy<Database<SQLiteConnection>> = Lazy::new(Database::new);
 
 type BoxError = Box<dyn std::error::Error>;
 type BoxResult = Result<(), BoxError>;
@@ -104,11 +102,8 @@ async fn main() -> BoxResult {
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
-    {
-        let mut db = DB_MUTEX.lock().await;
-        db.connect()?;
-        db.set_up()?;
-    }
+    DATABASE.connect().await?;
+    DATABASE.set_up_protip_table().await?;
 
     if let Err(why) = make_client().await?.start().await {
         error!("Client error: {:?}", why);
