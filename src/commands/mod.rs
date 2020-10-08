@@ -1,6 +1,6 @@
 use serenity::model::prelude::Message;
 use serenity::prelude::Context;
-use tracing::info;
+use tracing::debug;
 
 pub mod blackbox;
 pub mod help;
@@ -12,6 +12,6 @@ pub async fn send_message(
     msg: &Message,
     content: &str,
 ) -> serenity::Result<Message> {
-    info!("Sent: {}", content);
+    debug!("Sent: {}", content);
     msg.channel_id.say(&ctx.http, content).await
 }
