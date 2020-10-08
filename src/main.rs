@@ -80,7 +80,9 @@ na to, naruszamy RODO.
 Absurd!!!
 p.niemiec"#;
 
-    if msg.content != ABSURD && msg.content.to_lowercase().contains("nagrywa") {
+    let lowercase_content = msg.content.to_lowercase();
+    let contains_trigger = lowercase_content.contains("nagrywa") || lowercase_content.contains("absurd");
+    if msg.content != ABSURD && contains_trigger {
         info!("Sending RODO notice");
         if let Err(e) = msg.channel_id.say(&_ctx.http, ABSURD).await {
             error!("Error sending RODO notice: {:?}", e);
