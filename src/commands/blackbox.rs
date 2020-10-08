@@ -6,10 +6,10 @@ use serenity::{
         Args, CommandResult,
     },
     model::channel::Message,
-    utils::{content_safe, ContentSafeOptions},
+    utils::content_safe,
 };
 
-use crate::commands::send_message;
+use crate::commands::{make_settings, send_message};
 use crate::runners::binary_runner::BinaryRunner;
 use crate::runners::runner_error::RunnerError;
 use serenity::utils::MessageBuilder;
@@ -68,16 +68,4 @@ async fn trim_content(ctx: &Context, msg: &Message, args: &Args) -> String {
     content_safe(&ctx.cache, &args.rest(), &make_settings(msg))
         .await
         .replace('\n', " ")
-}
-
-fn make_settings(msg: &Message) -> ContentSafeOptions {
-    if let Some(guild_id) = msg.guild_id {
-        ContentSafeOptions::default()
-            .clean_channel(false)
-            .display_as_member_from(guild_id)
-    } else {
-        ContentSafeOptions::default()
-            .clean_channel(false)
-            .clean_role(false)
-    }
 }
