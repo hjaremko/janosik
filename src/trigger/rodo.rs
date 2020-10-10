@@ -23,6 +23,10 @@ p.niemiec"#
         "RODO notice".to_string()
     }
 
+    fn frequency() -> i32 {
+        40
+    }
+
     fn contains_trigger(content: &str) -> bool {
         const TRIGGER_WORDS: &[&str] = &["nagrywa", "nagra", "absurd", "tokarczyk"];
         let mut engine: SimSearch<u32> = SimSearch::new();
