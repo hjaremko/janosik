@@ -24,7 +24,7 @@ p.niemiec"#
     }
 
     fn frequency() -> i32 {
-        40
+        20
     }
 
     fn contains_trigger(content: &str) -> bool {
