@@ -10,7 +10,7 @@ use crate::commands::send_message;
 use crate::database::protip_handler::ProtipHandler;
 use crate::database::sqlite_connection::SQLiteConnection;
 use crate::database::Database;
-use crate::trigger::handle_triggers;
+// use crate::trigger::handle_triggers;
 use once_cell::sync::Lazy;
 use serenity::futures::io::ErrorKind;
 use serenity::prelude::*;
@@ -71,10 +71,10 @@ async fn unknown_command(_ctx: &Context, _msg: &Message, unknown_command_name: &
 }
 
 #[hook]
-async fn normal_message(ctx: &Context, msg: &Message) {
+async fn normal_message(_ctx: &Context, msg: &Message) {
     debug!("{}: {}", msg.author.name, msg.content);
 
-    handle_triggers(&ctx, msg).await
+    // handle_triggers(&ctx, msg).await // todo: trigger configs
 }
 
 #[hook]
@@ -115,7 +115,7 @@ async fn main() -> BoxResult {
 async fn make_client() -> Result<Client, Error> {
     let token = get_token_from_env()?;
 
-    Client::new(&token)
+    Client::builder(&token)
         .event_handler(Handler)
         .framework(make_framework(get_owners(&token).await?))
         .await
