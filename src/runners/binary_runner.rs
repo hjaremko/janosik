@@ -76,7 +76,7 @@ impl BinaryRunner {
                 child.kill().expect("Command wasn't running");
                 Err(RunnerError::Timeout)
             }
-            Some(status) => Ok(status.code().unwrap()),
+            Some(status) => Ok(status.code().unwrap_or(-1)),
         }
     }
 
