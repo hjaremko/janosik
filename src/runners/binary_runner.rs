@@ -1,7 +1,8 @@
 use crate::runners::runner_error::RunnerError;
-use serenity::futures::io::Error;
+use serenity::futures::io::{Error, ErrorKind};
 use std::fs;
 use std::fs::File;
+use std::path::{PathBuf, Path};
 use std::io::{BufReader, Read};
 use std::process::{Child, ChildStdout, Command, Stdio};
 use std::time::Duration;
@@ -57,7 +58,20 @@ impl BinaryRunner {
     }
 
     fn spawn_process(program_name: &str, file: File) -> Result<Child, Error> {
-        Command::new(format!("bin/{}", program_name))
+        if program_name.contains("..") {
+            return Err(Error::new(ErrorKind::NotFound, "invalid path"));
+        }
+
+        let path = PathBuf::from("bin/").canonicalize()?;
+        let program_path = path.join(Path::new(program_name)).canonicalize()?;
+
+        let err = || Error::new(ErrorKind::NotFound, "invalid path");
+        let path_str = program_path.to_str().ok_or(err())?;
+        if !path_str.starts_with(path.to_str().ok_or(err())?) {
+            return Err(err())
+        }
+
+        Command::new(path_str)
             .stdin(Stdio::from(file))
             .stdout(Stdio::piped())
             .spawn()
